@@ -46,7 +46,7 @@ export default buildConfig({
     payloadCloud(),
     secondaryDBPlugin({
       collections: ["second-db"],
-      secondDBUrl: "mongodb://127.0.0.1/poc-multiple-dbs-second",
+      secondDBUrl: process.env.DATABASE_URI_2,
     }),
   ],
   db: mongooseAdapter({
