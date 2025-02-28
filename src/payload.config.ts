@@ -32,7 +32,7 @@ export default buildConfig({
     // BUT it will source data from second db "pages" collection
     {
       slug: "second-db-pages",
-      dbName: 'pages',
+      dbName: "pages",
       fields: [
         {
           type: "text",
@@ -52,7 +52,7 @@ export default buildConfig({
     secondaryDBPlugin({
       collections: ["second-db-pages"],
       // secondDBUrl: process.env.DATABASE_URI_2,
-      secondDBUrl: 'mongodb://127.0.0.1/database2',
+      secondDBUrl: "mongodb://127.0.0.1/database2",
     }),
   ],
   db: mongooseAdapter({
@@ -76,6 +76,6 @@ export default buildConfig({
       // so if you use `index: true` in Payload on any fields, Payload will no longer
       // create indexes for you
       autoIndex: false,
-    }
+    },
   }),
 });
