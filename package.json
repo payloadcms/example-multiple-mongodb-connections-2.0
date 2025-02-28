@@ -1,5 +1,5 @@
 { 
-  "name": "@payloadcms/payload-mulitple-mongodb-connections",
+  "name": "@payloadcms/mulitple-mongodb-connections",
   "version": "0.0.1",
   "homepage:": "https://payloadcms.com",
   "repository": "git@github.com:payloadcms/payload-plugin-template.git",
