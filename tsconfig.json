@@ -1,23 +1,23 @@
 {
   "compilerOptions": {
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "strict": false,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "allowJs": true,
+    "module": "commonjs",
+    "sourceMap": true,
     "jsx": "react",
-    "paths": {
-      "payload/generated-types": ["./src/payload-types.ts"],
-       "@/*": ["./src/*"]
-    }
+    "esModuleInterop": true,
+    "declaration": true,
+    "declarationDir": "./dist",
+    "skipLibCheck": true,
+    "strict": true,
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist", "build"],
-  "ts-node": {
-    "transpileOnly": true,
-    "swc": true
-  }
+  "include": [
+    "src/**/*",
+  ],
 }

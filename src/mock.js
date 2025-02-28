@@ -1,1 +1,1 @@
-export const customInit = {};
+export const customInit = {}
