@@ -12,103 +12,103 @@ export const secondaryDBPlugin =
     secondDBUrl: string;
     collections: string[];
   }) =>
-  async (config: Config) => {
-    const defaultAdapterConfig = config.db;
+    async (config: Config) => {
+      const defaultAdapterConfig = config.db;
 
-    let adapter: (args: { payload: Payload }) => BaseDatabaseAdapter = ({
-      payload,
-    }) => {
-      const secondAdapter = mongooseAdapter({
-        url: secondDBUrl,
-      })({ payload });
+      let adapter: (args: { payload: Payload }) => BaseDatabaseAdapter = ({
+        payload,
+      }) => {
+        const secondAdapter = mongooseAdapter({
+          url: secondDBUrl,
+        })({ payload });
 
-      let defaultAdapter = defaultAdapterConfig({ payload }) as MongooseAdapter;
+        let defaultAdapter = defaultAdapterConfig({ payload }) as MongooseAdapter;
 
-      secondAdapter.payload = payload;
+        secondAdapter.payload = payload;
 
-      return new Proxy(defaultAdapter, {
-        get(target, p) {
-          if (p === "init") {
-            return async function init() {
-              target.connection = await mongoose
-                .createConnection(defaultAdapter.url as string, {
-                  autoIndex: true,
-                  ...defaultAdapter.connectOptions,
-                })
-                .asPromise();
+        return new Proxy(defaultAdapter, {
+          get(target, p) {
+            if (p === "init") {
+              return async function init() {
+                target.connection = await mongoose
+                  .createConnection(defaultAdapter.url as string, {
+                    autoIndex: true,
+                    ...defaultAdapter.connectOptions,
+                  })
+                  .asPromise();
 
-              mongoose.model = (...args: any[]) => {
-                // @ts-expect-error err
-                return target.connection.model(...args);
+                mongoose.model = (...args: any[]) => {
+                  // @ts-expect-error err
+                  return target.connection.model(...args);
+                };
+
+                let client = target.connection.getClient();
+
+                if (!client.options.replicaSet) {
+                  target.transactionOptions = false;
+                  target.beginTransaction = undefined;
+                }
+
+                await target.init(payload);
+
+                secondAdapter.connection = await mongoose
+                  .createConnection(secondDBUrl, {
+                    autoIndex: true,
+                    ...defaultAdapter.connectOptions,
+                  })
+                  .asPromise();
+
+                payload.logger.info("Connected to the main database");
+
+                mongoose.model = (...args: any[]) => {
+                  // @ts-expect-error err
+                  return secondAdapter.connection.model(...args);
+                };
+
+                client = secondAdapter.connection.getClient();
+
+                if (!client.options.replicaSet) {
+                  secondAdapter.transactionOptions = false;
+                  secondAdapter.beginTransaction = undefined;
+                }
+
+                await secondAdapter.init(payload);
+
+                payload.logger.info("Connected to the secondary database");
               };
+            }
 
-              let client = target.connection.getClient();
+            if (p === "connect") {
+              return function () { };
+            }
 
-              if (!client.options.replicaSet) {
-                target.transactionOptions = false;
-                target.beginTransaction = undefined;
-              }
+            const value = target[p];
 
-              await target.init(payload);
+            if (typeof value === "function") {
+              return function (...args: unknown[]) {
+                let firstArg = args[0];
+                if (
+                  firstArg &&
+                  typeof firstArg === "object" &&
+                  "collection" in firstArg &&
+                  typeof firstArg.collection === "string" &&
+                  collections.includes(firstArg.collection)
+                ) {
+                  return Reflect.apply(secondAdapter[p], secondAdapter, args);
+                }
 
-              secondAdapter.connection = await mongoose
-                .createConnection(secondDBUrl, {
-                  autoIndex: true,
-                  ...defaultAdapter.connectOptions,
-                })
-                .asPromise();
+                let val = target[p](...args);
 
-              payload.logger.info("Connected to the main database");
-
-              mongoose.model = (...args: any[]) => {
-                // @ts-expect-error err
-                return secondAdapter.connection.model(...args);
+                return val;
               };
+            }
 
-              client = secondAdapter.connection.getClient();
+            return target[p];
+          },
+        });
+      };
 
-              if (!client.options.replicaSet) {
-                secondAdapter.transactionOptions = false;
-                secondAdapter.beginTransaction = undefined;
-              }
+      config.db = adapter;
 
-              await secondAdapter.init(payload);
-
-              payload.logger.info("Connected to the secondary database");
-            };
-          }
-
-          if (p === "connect") {
-            return function () {};
-          }
-
-          const value = target[p];
-
-          if (typeof value === "function") {
-            return function (...args: unknown[]) {
-              let firstArg = args[0];
-              if (
-                firstArg &&
-                typeof firstArg === "object" &&
-                "collection" in firstArg &&
-                typeof firstArg.collection === "string" &&
-                collections.includes(firstArg.collection)
-              ) {
-                return Reflect.apply(secondAdapter[p], secondAdapter, args);
-              }
-
-              let val = target[p](...args);
-
-              return val;
-            };
-          }
-
-          return target[p];
-        },
-      });
+      return config;
     };
-
-    config.db = adapter;
-
-    return config;
-  };
